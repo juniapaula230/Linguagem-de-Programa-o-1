@@ -1,0 +1,132 @@
+drop table telefone_motorista; 
+drop table endereco_motorista;
+drop table beneficio;
+drop table utilizacao_veiculo;
+drop table motorista;
+
+
+CREATE TABLE  categoria (
+  id INT NOT NULL PRIMARY KEY,
+  nome VARCHAR(50) NOT NULL,
+  capacidade_carga FLOAT,
+  numero_passageiro INTEGER,
+  consumo_medio FLOAT
+);
+
+CREATE TABLE departamento ( 
+  id INT NOT NULL PRIMARY KEY, 
+  nome VARCHAR(50) NOT NULL
+); 
+
+CREATE TABLE endereco_departamento (
+  id INT NOT NULL PRIMARY KEY,--colocar a mesma variavel do id departamento aqui no java
+  rua VARCHAR(100) NOT NULL,
+  bairro VARCHAR(50) NOT NULL,
+  numero VARCHAR(10) NOT NULL,
+  complemento VARCHAR(100),
+  cidade VARCHAR(50) NOT NULL,
+  estado VARCHAR(2) NOT NULL,
+  cep VARCHAR(10) NOT NULL,
+  departamento_id INT NOT NULL,--colocar a mesma variavel do id departamento aqui no java
+   FOREIGN KEY (departamento_id) REFERENCES departamento(id)
+);
+
+CREATE TABLE motorista ( 
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(100) NOT NULL,
+  cpf VARCHAR(11) NOT NULL,
+  salario FLOAT NOT NULL,
+  sexo VARCHAR(2) NOT NULL,
+  tipo_motorista TEXT--Terceirizado ou Contratado
+);
+
+
+CREATE TABLE telefone_motorista (
+  id INT NOT NULL PRIMARY KEY,--colocar a mesma variavel do id motorista aqui no java
+  telefone_fixo VARCHAR(11) NOT NULL,
+  celular VARCHAR(11) NOT NULL,
+  motorista_id INT NOT NULL,
+  FOREIGN KEY (motorista_id) REFERENCES motorista(id)--colocar a mesma variavel do id motorista aqui no java
+);
+
+CREATE TABLE endereco_motorista (
+  id INT NOT NULL PRIMARY KEY,--colocar a mesma variavel do id motorista aqui no java
+  rua VARCHAR(100) NOT NULL,
+  bairro VARCHAR(50) NOT NULL,
+  numero INTEGER,
+  complemento VARCHAR(100),
+  cidade VARCHAR(50) NOT NULL,
+  estado VARCHAR(2) NOT NULL,
+  cep VARCHAR(10) NOT NULL,
+  motorista_id INT NOT NULL,
+  FOREIGN KEY (motorista_id) REFERENCES motorista(id)--colocar a mesma variavel do id motorista aqui no java
+);
+
+CREATE TABLE beneficio ( 
+  id INT NOT NULL PRIMARY KEY, --colocar a mesma variavel do id motorista aqui no java 
+  vale_transporte BOOLEAN NOT NULL, 
+  vale_refeicao BOOLEAN NOT NULL,
+  motorista_id INT NOT NULL,
+  FOREIGN KEY (motorista_id) REFERENCES motorista(id)--colocar a mesma variavel do id motorista aqui no java
+); 
+
+
+CREATE TABLE veiculo ( 
+  id SERIAL NOT NULL PRIMARY KEY, 
+  placa VARCHAR(10) NOT NULL, 
+  modelo VARCHAR(50) NOT NULL, 
+  ano INT NOT NULL, 
+  cor VARCHAR(20) NOT NULL, 
+  tipo_combustivel VARCHAR(20) NOT NULL, 
+  codigo_unico INT UNIQUE NOT NULL, 
+  --retirei motorista 
+  categoria_id INT NOT NULL, 
+  FOREIGN KEY (categoria_id) REFERENCES categoria(id) 
+); 
+
+
+CREATE TABLE utilizacao_veiculo (
+  id SERIAL NOT NULL PRIMARY KEY, --codigo de utilizacao pode ser serial
+  motorista_id INT NOT NULL, --informar que motorista esta usando
+  veiculo_id INT NOT NULL, --qual veiculo esta usando
+  data_inicio TIMESTAMP NOT NULL,
+  data_fim TIMESTAMP,
+  quilometragem_veiculo FLOAT NOT NULL,
+  distancia FLOAT NOT NULL,
+  cidade_origem VARCHAR(50) NOT NULL,
+  cidade_destino VARCHAR(50) NOT NULL,
+  FOREIGN KEY (motorista_id) REFERENCES motorista(id),
+  FOREIGN KEY (veiculo_id) REFERENCES veiculo(id)
+);
+
+--ATE AQUI DEU TUDO CERTO
+
+CREATE OR REPLACE FUNCTION AtualizarSalarioComBeneficio()
+RETURNS TRIGGER AS $$
+DECLARE
+  beneficio_exists BOOLEAN;
+BEGIN
+  -- Verifica se existe algum benefício true para o motorista
+  SELECT 
+    CASE
+      WHEN NEW.vale_transporte OR NEW.vale_refeicao THEN true
+      ELSE false
+    END
+  INTO beneficio_exists;
+
+  -- Se houver benefício, aumenta o salário em R$ 300
+  IF beneficio_exists THEN
+    NEW.salario := NEW.salario + 300.00;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER TriggerAtualizarSalario
+BEFORE INSERT OR UPDATE ON beneficio
+FOR EACH ROW
+EXECUTE FUNCTION AtualizarSalarioComBeneficio();
+
+select * from motorista;
